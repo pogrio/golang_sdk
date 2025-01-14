@@ -1,4 +1,3 @@
-// Package main demonstrates the usage of the POGR SDK
 package main
 
 import (
@@ -6,9 +5,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/pogrio/golang_sdk/pogr"
-
 	"github.com/joho/godotenv"
+	"github.com/pogrio/golang_sdk/pogr"
 )
 
 var (
@@ -40,26 +38,9 @@ func init() {
 }
 
 func main() {
-
-	// Session based intake
-	config1 := pogr.Config{
+	config := pogr.Config{
 		ClientKey:            clientID,
 		BuildKey:             buildID,
-		BaseURL:              intakeBaseURL,
-		Timeout:              30 * time.Second,
-		EnableConnectionPool: true,
-	}
-
-	sdkWithSession := pogr.NewPOGRSDK(config1)
-	log.Printf("SDK Configuration:\n%s", sdkWithSession.PrintConfig())
-
-	// Run examples with different authentication methods
-	runJWTExample(sdkWithSession)
-	runAssociationIDExample(sdkWithSession)
-	runSteamTicketExample(sdkWithSession)
-
-	// AccessKey based intake
-	config2 := pogr.Config{
 		AccessKey:            accessKey,
 		SecretKey:            secretKey,
 		BaseURL:              intakeBaseURL,
@@ -67,20 +48,25 @@ func main() {
 		EnableConnectionPool: true,
 	}
 
-	sdkWithAccessKey := pogr.NewPOGRSDK(config2)
-	log.Printf("SDK Configuration:\n%s", sdkWithAccessKey.PrintConfig())
+	sdk := pogr.NewPOGRSDK(config)
 
-	sendTestDataWithoutSession(sdkWithAccessKey, "accessKey")
+	log.Printf("SDK Configuration:\n%s", sdk.PrintConfig())
 
-	// ClientID without session
-	sdkWithClientID := pogr.NewPOGRSDK(config1)
-	log.Printf("SDK Configuration:\n%s", sdkWithClientID.PrintConfig())
+	// Authentication examples
+	runJWTExample(sdk)
+	runAssociationIDExample(sdk)
+	runSteamTicketExample(sdk)
 
-	sendTestDataWithoutSession(sdkWithAccessKey, "clientID")
+	// Data example
+	sendTestData(sdk, "Session-based auth")
 
+	// Example usage of additional endpoints
+	runEventExample(sdk)
+	runLogExample(sdk)
+	runMetricsExample(sdk)
+	runMonitorExample(sdk)
 }
 
-// runJWTExample demonstrates JWT authentication
 func runJWTExample(sdk pogr.POGRService) {
 	sessionID, err := sdk.InitWithUserJWT(pogrJWT)
 	if err != nil {
@@ -88,12 +74,8 @@ func runJWTExample(sdk pogr.POGRService) {
 		return
 	}
 	log.Printf("JWT Session initialized: %s", sessionID)
-
-	// Send test data
-	sendTestData(sdk, "JWT")
 }
 
-// runAssociationIDExample demonstrates Association ID authentication
 func runAssociationIDExample(sdk pogr.POGRService) {
 	sessionID, err := sdk.InitWithAssociationID(associationID)
 	if err != nil {
@@ -101,12 +83,8 @@ func runAssociationIDExample(sdk pogr.POGRService) {
 		return
 	}
 	log.Printf("Association ID Session initialized: %s", sessionID)
-
-	// Send test data
-	sendTestData(sdk, "AssociationID")
 }
 
-// runSteamTicketExample demonstrates Steam Ticket authentication
 func runSteamTicketExample(sdk pogr.POGRService) {
 	sessionID, err := sdk.InitWithSteamTicket(steamAuthTicket)
 	if err != nil {
@@ -114,117 +92,92 @@ func runSteamTicketExample(sdk pogr.POGRService) {
 		return
 	}
 	log.Printf("Steam Ticket Session initialized: %s", sessionID)
-
-	// Send test data
-	sendTestData(sdk, "SteamTicket")
 }
 
-// sendTestData sends sample data with the specified authentication method
 func sendTestData(sdk pogr.POGRService, authMethod string) {
-
 	data := map[string]interface{}{
 		"auth_method": authMethod,
 		"timestamp":   time.Now().Unix(),
 		"test_data":   "Hello POGR!",
 	}
 
-	dataID1, err := sdk.SendData(data, nil)
+	dataID, err := sdk.SendData(data, nil)
 	if err != nil {
-		log.Printf("Failed to send data with %s auth: %v", authMethod, err)
+		log.Printf("Failed to send data with %s: %v", authMethod, err)
 		return
 	}
-	log.Printf("Data sent with %s auth: %s", authMethod, dataID1)
-
-	tags := &pogr.Tags{
-		OverrideTimestamp: time.Now().Add(-30 * time.Minute).Format(time.RFC3339),
-	}
-
-	dataID2, err := sdk.SendData(data, tags)
-	if err != nil {
-		log.Printf("Failed to send data with %s auth: %v", authMethod, err)
-		return
-	}
-	log.Printf("Data sent with %s auth: %s", authMethod, dataID2)
-
-	complexData := map[string]interface{}{
-		"data":           "string",
-		"any":            1,
-		"type":           true,
-		"doesn_t_matter": []int{1, 2, 3, 4, 5, 6},
-		"any_thing": map[string]interface{}{
-			"we":     "string",
-			"accept": "string",
-			"it":     true,
-		},
-	}
-
-	dataID3, err := sdk.SendData(complexData, tags)
-	if err != nil {
-		log.Printf("Failed to send data with %s auth: %v", authMethod, err)
-		return
-	}
-	log.Printf("Data sent with %s auth: %s", authMethod, dataID3)
-
-	if err := sdk.EndSession(); err != nil {
-		log.Printf("Failed to end %s session: %v", authMethod, err)
-	}
-
+	log.Printf("Data sent successfully: %s", dataID)
 }
 
-// sendTestDataWithoutSession sends data without session
-func sendTestDataWithoutSession(sdk pogr.POGRService, intakeType string) {
-	data := map[string]interface{}{
-		"auth_method": intakeType,
-		"timestamp":   time.Now().Unix(),
-		"test_data":   "Hello POGR!",
+func runEventExample(sdk pogr.POGRService) {
+	eventData := map[string]interface{}{
+		"player_id":        "12345",
+		"achievement_name": "Master Explorer",
 	}
-
-	dataID1, err := sdk.SendData(data, nil)
-	if err != nil {
-		log.Printf("Failed to send data with %s: %v", intakeType, err)
-		return
-	}
-	log.Printf("Data sent with %s auth: %s", intakeType, dataID1)
 
 	tags := &pogr.Tags{
-		TwitchID:          twitchID,
-		OverrideTimestamp: time.Now().Add(-30 * time.Minute).Format(time.RFC3339),
+		DiscordID: "9480bc67-88e6-42ee-bfb6-0c70137d1fad",
 	}
 
-	dataID2, err := sdk.SendData(data, tags)
+	eventID, err := sdk.SendEvent("player_login", "level_up", "achievement", "completed", "level_5_unlocked", eventData, tags)
 	if err != nil {
-		log.Printf("Failed to send data with %s auth: %v", intakeType, err)
+		log.Printf("Failed to send event: %v", err)
 		return
 	}
-	log.Printf("Data sent with %s auth: %s", intakeType, dataID2)
-
-	complexData := map[string]interface{}{
-		"data":           "string",
-		"any":            1,
-		"type":           true,
-		"doesn_t_matter": []int{1, 2, 3, 4, 5, 6},
-		"any_thing": map[string]interface{}{
-			"we":     "string",
-			"accept": "string",
-			"it":     true,
-		},
-	}
-
-	dataID3, err := sdk.SendData(complexData, tags)
-	if err != nil {
-		log.Printf("Failed to send data with %s auth: %v", intakeType, err)
-		return
-	}
-	log.Printf("Data sent with %s auth: %s", intakeType, dataID3)
+	log.Printf("Event sent successfully: %s", eventID)
 }
 
-// demonstrateUtilities shows usage of utility methods
-func demonstrateUtilities(sdk pogr.POGRService) {
-	log.Printf("SDK Initialized: %v", sdk.IsInitialized())
-	log.Printf("Session ID: %s", sdk.GetSessionID())
-
-	tags := []string{"steam_id", "twitch_id", "discord_id", "invalid_tag"}
-	for _, tag := range tags {
-		log.Printf("Tag '%s' valid: %v", tag, sdk.ValidateTag(tag))
+func runLogExample(sdk pogr.POGRService) {
+	logData := map[string]interface{}{
+		"user_id":    "user_56789",
+		"timestamp":  "2025-01-01T12:00:00Z",
+		"ip_address": "192.168.1.1",
 	}
+
+	tags := &pogr.Tags{
+		TwitchID:          "f88e0a15-26fa-492a-b83b-9861a44522df",
+		OverrideTimestamp: time.Now().Add(-1 * time.Hour).Format(time.RFC3339),
+	}
+
+	logID, err := sdk.SendLog("authentication", "live", "info", "user-login", "User logged in successfully", logData, tags)
+	if err != nil {
+		log.Printf("Failed to send log: %v", err)
+		return
+	}
+	log.Printf("Log sent successfully: %s", logID)
+}
+
+func runMetricsExample(sdk pogr.POGRService) {
+	metrics := map[string]interface{}{
+		"players_online":         250,
+		"average_latency_ms":     35.7,
+		"server_load_percentage": 80.5,
+	}
+
+	tags := &pogr.Tags{
+		SteamID: "steam_001234",
+	}
+
+	metricsID, err := sdk.SendMetrics("game_server", "production", metrics, tags)
+	if err != nil {
+		log.Printf("Failed to send metrics: %v", err)
+		return
+	}
+	log.Printf("Metrics sent successfully: %s", metricsID)
+}
+
+func runMonitorExample(sdk pogr.POGRService) {
+	dlls := []string{"graphics.dll", "physics.dll", "audio.dll"}
+
+	settings := map[string]interface{}{
+		"resolution": "1920x1080",
+		"fps_limit":  60,
+	}
+
+	monitorID, err := sdk.SendMonitorData(10.5, 4096000, dlls, settings)
+	if err != nil {
+		log.Printf("Failed to send monitor data: %v", err)
+		return
+	}
+	log.Printf("Monitor data sent successfully: %s", monitorID)
 }

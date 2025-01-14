@@ -15,6 +15,10 @@ type POGRService interface {
 
 	// Data Operations
 	SendData(data interface{}, tags *Tags) (string, error)
+	SendEvent(event, subEvent, eventType, eventFlag, eventKey string, eventData map[string]interface{}, tags *Tags) (string, error)
+	SendLog(service, environment, severity, logType, logMessage string, data map[string]interface{}, tags *Tags) (string, error)
+	SendMetrics(service, environment string, metrics map[string]interface{}, tags *Tags) (string, error)
+	SendMonitorData(cpuUsage float64, memoryUsage int, dllsLoaded []string, settings map[string]interface{}) (string, error)
 
 	// Utility Methods
 	IsInitialized() bool

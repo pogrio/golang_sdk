@@ -129,6 +129,134 @@ func (sdk *pogrSDK) EndSession() error {
 	return nil
 }
 
+// SendEvent sends an event with relevant details and optional user tags
+func (sdk *pogrSDK) SendEvent(event string, subEvent string, eventType string, eventFlag string, eventKey string, eventData map[string]interface{}, tags *Tags) (string, error) {
+	eventPayload := map[string]interface{}{
+		"event":       event,
+		"sub_event":   subEvent,
+		"event_type":  eventType,
+		"event_flag":  eventFlag,
+		"event_key":   eventKey,
+		"event_data":  eventData,
+		"tags":        tags,
+	}
+
+	jsonData, err := json.Marshal(eventPayload)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal event data: %w", err)
+	}
+
+	headers, err := sdk.getAuthHeaders()
+	if err != nil {
+		return "", err
+	}
+	headers["Content-Type"] = "application/json"
+
+	req := &Request{
+		Method:  "POST",
+		URL:     fmt.Sprintf("%s/event", sdk.config.BaseURL),
+		Headers: headers,
+		Body:    jsonData,
+	}
+
+	return sdk.handleDataResponse(req)
+}
+
+// SendLog submits a log entry for monitoring and auditing purposes
+func (sdk *pogrSDK) SendLog(service string, environment string, severity string, logType string, logMessage string, data map[string]interface{}, tags *Tags) (string, error) {
+	logPayload := map[string]interface{}{
+		"service":     service,
+		"environment": environment,
+		"severity":    severity,
+		"type":        logType,
+		"log":         logMessage,
+		"data":        data,
+		"tags":        tags,
+	}
+
+	jsonData, err := json.Marshal(logPayload)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal log data: %w", err)
+	}
+
+	headers, err := sdk.getAuthHeaders()
+	if err != nil {
+		return "", err
+	}
+	headers["Content-Type"] = "application/json"
+
+	req := &Request{
+		Method:  "POST",
+		URL:     fmt.Sprintf("%s/logs", sdk.config.BaseURL),
+		Headers: headers,
+		Body:    jsonData,
+	}
+
+	return sdk.handleDataResponse(req)
+}
+
+// SendMetrics sends real-time metrics for monitoring purposes
+func (sdk *pogrSDK) SendMetrics(service string, environment string, metrics map[string]interface{}, tags *Tags) (string, error) {
+	metricsPayload := map[string]interface{}{
+		"service":     service,
+		"environment": environment,
+		"metrics":     metrics,
+		"tags":        tags,
+	}
+
+	jsonData, err := json.Marshal(metricsPayload)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal metrics data: %w", err)
+	}
+
+	headers, err := sdk.getAuthHeaders()
+	if err != nil {
+		return "", err
+	}
+	headers["Content-Type"] = "application/json"
+
+	req := &Request{
+		Method:  "POST",
+		URL:     fmt.Sprintf("%s/metrics", sdk.config.BaseURL),
+		Headers: headers,
+		Body:    jsonData,
+	}
+
+	return sdk.handleDataResponse(req)
+}
+
+// SendMonitorData sends system resource usage data
+func (sdk *pogrSDK) SendMonitorData(cpuUsage float64, memoryUsage int, dllsLoaded []string, settings map[string]interface{}) (string, error) {
+	monitorPayload := map[string]interface{}{
+		"cpu_usage":    cpuUsage,
+		"memory_usage": memoryUsage,
+		"dlls_loaded":  dllsLoaded,
+		"settings":     settings,
+	}
+
+	jsonData, err := json.Marshal(monitorPayload)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal monitor data: %w", err)
+	}
+
+	headers, err := sdk.getAuthHeaders()
+	if err != nil {
+		return "", err
+	}
+	headers["Content-Type"] = "application/json"
+
+	req := &Request{
+		Method:  "POST",
+		URL:     fmt.Sprintf("%s/monitor", sdk.config.BaseURL),
+		Headers: headers,
+		Body:    jsonData,
+	}
+
+	return sdk.handleDataResponse(req)
+}
+
+
+
 // IsInitialized returns the initialization status
 func (sdk *pogrSDK) IsInitialized() bool {
 	sdk.mu.RLock()
